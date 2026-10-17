@@ -84,3 +84,10 @@ test("knowledge search finds the right FAQ section", () => {
   assert.equal(tools.searchKnowledge({ query: "hair coloring" }).results[0].title, "Services we do not offer");
   assert.equal(tools.searchKnowledge({ query: "xyzzy quantum" }).results.length, 0);
 });
+
+test("availability returns late-evening times, not just the first few", () => {
+  const { tools } = makeTools();
+  const r = tools.checkAvailability({ date: "2026-10-22", service_id: "combo" }); // Thu 10-20
+  assert.ok(r.available.includes("18:00"));
+  assert.equal(r.available.at(-1), "19:00");
+});

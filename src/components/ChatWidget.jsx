@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { api, formatTime } from "../api.js";
 
+// Models sometimes answer with light markdown. Render **bold** and drop other markers
+// instead of showing raw asterisks to the customer.
+function RichText({ text }) {
+  const parts = text.replace(/^#+\s*/gm, "").split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) => (p.startsWith("**") && p.endsWith("**") ? <strong key={i}>{p.slice(2, -2)}</strong> : p));
+}
+
 const STORAGE_KEY = "receptionist.conversation";
 const GREETING = {
   role: "assistant",
@@ -78,7 +85,7 @@ export default function ChatWidget({ defaultOpen = true }) {
       <div className="chat-list" ref={listRef}>
         {messages.map((m, i) => (
           <div key={i} className={`bubble ${m.role}`}>
-            {m.text}
+            {m.role === "assistant" ? <RichText text={m.text} /> : m.text}
             {m.booking && (
               <div className="booking-card">
                 <span>✓ Confirmed · {m.booking.code}</span>

@@ -153,7 +153,7 @@ export class Tools {
     if (!r.open) return { date, day: weekdayName(date), open: false, message: "Closed that day." };
     return {
       date, day: weekdayName(date), service: service.id, hours: r.hours,
-      available: r.slots.slice(0, 12), total_available: r.slots.length,
+      available: r.slots, total_available: r.slots.length, // all times: the model must see late slots too
       ...(r.slots.length === 0 && { message: "Fully booked or no times left that day." }),
     };
   }

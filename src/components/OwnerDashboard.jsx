@@ -128,7 +128,7 @@ export default function OwnerDashboard() {
           <div className="transcript">
             {selected.transcript.map((t, i) => (
               <div key={i} className={`bubble ${t.role}`}>
-                {t.text}
+                {t.text.replace(/\*\*/g, "")}
                 {t.tools?.length > 0 && (
                   <div className="tool-row">{t.tools.map((x, j) => <code key={j} className={x.isError ? "err" : ""}>{x.tool}</code>)}</div>
                 )}
