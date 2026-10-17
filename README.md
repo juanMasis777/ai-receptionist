@@ -4,8 +4,6 @@ A bilingual AI receptionist for small businesses. It chats with customers on the
 
 Built on the **Claude API with tool use**, without an agent framework. The demo business is a fictional Miami barber shop, *Clásico Barber Studio*.
 
-![Customer chat and owner dashboard](docs/screenshot.png)
-
 ## Why it is safe to put in front of customers
 
 The model decides *what to do*; deterministic code decides *what is true*.
