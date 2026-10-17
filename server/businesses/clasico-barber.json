@@ -1,0 +1,89 @@
+{
+  "id": "clasico-barber",
+  "name": "Clásico Barber Studio",
+  "demo": true,
+  "timezone": "America/New_York",
+  "phone": "(305) 555-0142",
+  "address": "1450 SW 8th St, Miami, FL 33135",
+  "languages": [
+    "en",
+    "es"
+  ],
+  "slotMinutes": 30,
+  "hours": {
+    "mon": null,
+    "tue": [
+      "10:00",
+      "19:00"
+    ],
+    "wed": [
+      "10:00",
+      "19:00"
+    ],
+    "thu": [
+      "10:00",
+      "20:00"
+    ],
+    "fri": [
+      "10:00",
+      "20:00"
+    ],
+    "sat": [
+      "09:00",
+      "18:00"
+    ],
+    "sun": [
+      "10:00",
+      "15:00"
+    ]
+  },
+  "services": [
+    {
+      "id": "haircut",
+      "name": {
+        "en": "Classic haircut",
+        "es": "Corte clásico"
+      },
+      "price": 30,
+      "minutes": 30
+    },
+    {
+      "id": "fade",
+      "name": {
+        "en": "Skin fade",
+        "es": "Fade / degradado"
+      },
+      "price": 35,
+      "minutes": 45
+    },
+    {
+      "id": "beard",
+      "name": {
+        "en": "Beard trim + hot towel",
+        "es": "Arreglo de barba + toalla caliente"
+      },
+      "price": 20,
+      "minutes": 30
+    },
+    {
+      "id": "combo",
+      "name": {
+        "en": "Haircut + beard",
+        "es": "Corte + barba"
+      },
+      "price": 45,
+      "minutes": 60
+    },
+    {
+      "id": "kids",
+      "name": {
+        "en": "Kids haircut (under 12)",
+        "es": "Corte de niño (menor de 12)"
+      },
+      "price": 22,
+      "minutes": 30
+    }
+  ],
+  "chairs": 2,
+  "bookingWindowDays": 45
+}
