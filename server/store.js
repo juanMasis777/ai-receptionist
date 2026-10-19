@@ -4,19 +4,32 @@ import crypto from "node:crypto";
 
 // Minimal JSON-file persistence. One file per business keeps the demo
 // dependency-free; replace with Postgres/Supabase for multi-tenant production.
+// `seedFile` is read-only starting data (used on Vercel, where `file` lives in /tmp).
 export class Store {
-  constructor(file = null) {
+  constructor(file = null, seedFile = null) {
     this.file = file;
     this.data = { bookings: [], conversations: {}, notifications: [] };
-    if (file && fs.existsSync(file)) this.data = { ...this.data, ...JSON.parse(fs.readFileSync(file, "utf8")) };
+    const source = file && fs.existsSync(file) ? file : seedFile && fs.existsSync(seedFile) ? seedFile : null;
+    if (source) {
+      try {
+        this.data = { ...this.data, ...JSON.parse(fs.readFileSync(source, "utf8")) };
+      } catch (err) {
+        console.error(`Could not read ${source}, starting empty:`, err.message);
+      }
+    }
   }
 
   save() {
     if (!this.file) return;
-    fs.mkdirSync(path.dirname(this.file), { recursive: true });
-    const tmp = `${this.file}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(this.data, null, 2));
-    fs.renameSync(tmp, this.file); // atomic replace, no half-written files
+    try {
+      fs.mkdirSync(path.dirname(this.file), { recursive: true });
+      const tmp = `${this.file}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(this.data, null, 2));
+      fs.renameSync(tmp, this.file); // atomic replace, no half-written files
+    } catch (err) {
+      // Never fail a customer's request because the disk is read-only.
+      console.error("Store save failed (data kept in memory only):", err.message);
+    }
   }
 
   // ---- bookings

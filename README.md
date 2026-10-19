@@ -59,6 +59,16 @@ npm run dev               # API on :8787, web on :5173
 
 Production: `npm run build && npm start` serves everything from one Node process.
 
+### Deploy to Vercel
+
+The Express app lives in `server/app.js`. `server/index.js` starts it locally; on Vercel, `api/index.js` exposes the same app as a serverless function and `vercel.json` routes every `/api/*` request to it.
+
+1. Import the repo in Vercel (framework preset: Vite).
+2. Add `ANTHROPIC_API_KEY` and `OWNER_TOKEN` under Settings → Environment Variables.
+3. Deploy.
+
+On Vercel, data is written to `/tmp`, which is temporary and not shared between instances, so bookings can disappear. Fine for a chat demo; use Postgres/Supabase to keep bookings.
+
 ### Use it for another business
 
 Copy `server/businesses/clasico-barber.json` and `.md`, edit the services, hours and FAQ, and set `BUSINESS_ID` in `.env`. No code changes.
@@ -66,7 +76,7 @@ Copy `server/businesses/clasico-barber.json` and `.md`, edit the services, hours
 ## Tests and evals
 
 ```bash
-npm test                  # 15 offline tests, no API key needed
+npm test                  # 16 offline tests, no API key needed
 npm run evals             # 8 real-API scenarios (EN + ES)
 npm run evals -- --trials 3
 ```
@@ -78,7 +88,7 @@ Eval scenarios: English booking, Spanish booking, price only from tools, Spanish
 ## Limitations and next steps
 
 - Web chat only. The same engine is meant to sit behind WhatsApp and a phone line (Twilio).
-- JSON-file storage is for the demo; use Postgres for real multi-tenant use.
+- JSON-file storage is for the demo (and temporary on Vercel); use Postgres for real multi-tenant use.
 - One calendar per business (with a chair count), no per-barber schedules yet.
 - No SMS reminders yet.
 
