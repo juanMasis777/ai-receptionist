@@ -32,6 +32,12 @@ export class Store {
     }
   }
 
+  // Same async hooks as SupabaseStore, so callers can treat both stores alike.
+  // The file store keeps everything in memory, so there is nothing to load or flush.
+  async load() {}
+  async refreshBookings() {}
+  async flush() {}
+
   // ---- bookings
   bookingsOn(date) {
     return this.data.bookings.filter((b) => b.date === date && b.status === "confirmed");

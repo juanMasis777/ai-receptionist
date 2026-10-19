@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { KnowledgeBase } from "./knowledge.js";
 import { Store } from "./store.js";
+import { SupabaseStore } from "./supabase-store.js";
 import { AnthropicLLM } from "./llm.js";
 import { runTurn, detectLanguage } from "./agent.js";
 
@@ -13,10 +14,18 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const BUSINESS_ID = process.env.BUSINESS_ID || "clasico-barber";
 const business = JSON.parse(fs.readFileSync(path.join(root, "server/businesses", `${BUSINESS_ID}.json`), "utf8"));
 const kb = new KnowledgeBase(fs.readFileSync(path.join(root, "server/businesses", `${BUSINESS_ID}.md`), "utf8"));
-// Vercel functions can only write to /tmp. Locally we keep using ./data.
-// Note: /tmp on Vercel is temporary and not shared between instances.
+// Storage: Supabase when configured (needed on Vercel, where the disk is temporary),
+// otherwise a JSON file in ./data for local development.
+const useSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 const dataDir = process.env.DATA_DIR || (process.env.VERCEL ? "/tmp/data" : path.join(root, "data"));
-const store = new Store(path.join(dataDir, `${BUSINESS_ID}.json`), path.join(root, "data", `${BUSINESS_ID}.json`));
+const fileStore = useSupabase ? null : new Store(path.join(dataDir, `${BUSINESS_ID}.json`), path.join(root, "data", `${BUSINESS_ID}.json`));
+if (process.env.VERCEL && !useSupabase) console.warn("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set: bookings are kept in /tmp and will be lost.");
+
+// One SupabaseStore per request, so concurrent requests never share half-loaded data.
+function getStore() {
+  if (!useSupabase) return fileStore;
+  return new SupabaseStore({ url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY, businessId: BUSINESS_ID });
+}
 
 let llm = null;
 function getLLM() {
@@ -79,7 +88,6 @@ app.post("/api/chat", rateLimit, async (req, res) => {
   if (message.length > 1000) return res.status(400).json({ error: "message is too long" });
 
   const conversationId = /^[a-f0-9-]{36}$/.test(req.body?.conversationId || "") ? req.body.conversationId : crypto.randomUUID();
-  const convo = store.getConversation(conversationId);
 
   let client;
   try {
@@ -88,7 +96,10 @@ app.post("/api/chat", rateLimit, async (req, res) => {
     return res.status(503).json({ error: err.message });
   }
 
+  const store = getStore();
   try {
+    await store.load({ conversationId });
+    const convo = store.getConversation(conversationId);
     const result = await runTurn({
       llm: client, business, kb, store, conversationId,
       history: trimHistory(convo?.messages || []),
@@ -112,6 +123,7 @@ app.post("/api/chat", rateLimit, async (req, res) => {
         output: (convo?.usage?.output || 0) + result.usage.output,
       },
     });
+    await store.flush();
     res.json({ conversationId, reply: result.reply, tools: result.trace.map((t) => t.tool), booking: booking?.output || null });
   } catch (err) {
     console.error(err);
@@ -119,7 +131,14 @@ app.post("/api/chat", rateLimit, async (req, res) => {
   }
 });
 
-app.get("/api/owner/summary", ownerAuth, (_req, res) => {
+app.get("/api/owner/summary", ownerAuth, async (_req, res) => {
+  const store = getStore();
+  try {
+    await store.load({ all: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(502).json({ error: "Could not load data." });
+  }
   const { bookings, notifications, conversations } = store.data;
   res.json({
     business: { name: business.name },
@@ -139,7 +158,15 @@ app.get("/api/owner/summary", ownerAuth, (_req, res) => {
   });
 });
 
-app.get("/api/owner/conversations/:id", ownerAuth, (req, res) => {
+app.get("/api/owner/conversations/:id", ownerAuth, async (req, res) => {
+  if (!/^[a-f0-9-]{36}$/.test(req.params.id)) return res.status(404).json({ error: "Not found" });
+  const store = getStore();
+  try {
+    await store.load({ conversationId: req.params.id });
+  } catch (err) {
+    console.error(err);
+    return res.status(502).json({ error: "Could not load data." });
+  }
   const c = store.getConversation(req.params.id);
   if (!c) return res.status(404).json({ error: "Not found" });
   res.json({ id: c.id, language: c.language, transcript: c.transcript, bookingCode: c.bookingCode || null });

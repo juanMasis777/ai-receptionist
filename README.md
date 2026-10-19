@@ -63,11 +63,14 @@ Production: `npm run build && npm start` serves everything from one Node process
 
 The Express app lives in `server/app.js`. `server/index.js` starts it locally; on Vercel, `api/index.js` exposes the same app as a serverless function and `vercel.json` routes every `/api/*` request to it.
 
-1. Import the repo in Vercel (framework preset: Vite).
-2. Add `ANTHROPIC_API_KEY` and `OWNER_TOKEN` under Settings → Environment Variables.
-3. Deploy.
+1. Create the tables: run `supabase/migrations/20261019000000_receptionist_tables.sql` in the Supabase SQL editor.
+2. Import the repo in Vercel (framework preset: Vite).
+3. Add under Settings → Environment Variables: `ANTHROPIC_API_KEY`, `OWNER_TOKEN`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (the secret key, never exposed to the browser).
+4. Deploy.
 
-On Vercel, data is written to `/tmp`, which is temporary and not shared between instances, so bookings can disappear. Fine for a chat demo; use Postgres/Supabase to keep bookings.
+Storage: with the two Supabase variables set, bookings, conversations and owner notifications live in Postgres. Without them the app uses a JSON file in `./data` (local dev); on Vercel that file sits in `/tmp` and is lost.
+
+Each request loads fresh rows, and every tool call writes before the model sees its result, so a booking is saved before the customer is told it is confirmed. Availability is re-read right before booking; a true race between two simultaneous requests for the last chair is still possible (a database constraint would close it).
 
 ### Use it for another business
 
@@ -76,7 +79,7 @@ Copy `server/businesses/clasico-barber.json` and `.md`, edit the services, hours
 ## Tests and evals
 
 ```bash
-npm test                  # 16 offline tests, no API key needed
+npm test                  # 21 offline tests, no API key needed
 npm run evals             # 8 real-API scenarios (EN + ES)
 npm run evals -- --trials 3
 ```
@@ -88,7 +91,7 @@ Eval scenarios: English booking, Spanish booking, price only from tools, Spanish
 ## Limitations and next steps
 
 - Web chat only. The same engine is meant to sit behind WhatsApp and a phone line (Twilio).
-- JSON-file storage is for the demo (and temporary on Vercel); use Postgres for real multi-tenant use.
+- Supabase storage is scoped by `business_id`, but there is no per-business login yet: one deployment serves one business.
 - One calendar per business (with a chair count), no per-barber schedules yet.
 - No SMS reminders yet.
 

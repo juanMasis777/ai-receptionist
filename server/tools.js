@@ -88,7 +88,12 @@ export class Tools {
       notify_owner: () => this.notifyOwner(input),
     }[name];
     if (!fn) throw new ToolError(`Unknown tool '${name}'.`);
-    return fn();
+    // Availability must come from the latest bookings, not from a copy loaded earlier in the turn.
+    if (name === "check_availability" || name === "book_appointment") await this.store.refreshBookings();
+    const output = fn();
+    // Save before answering: if the write fails, the model gets an error instead of a false confirmation.
+    await this.store.flush();
+    return output;
   }
 
   service(id) {
